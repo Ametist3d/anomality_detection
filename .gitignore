@@ -1,0 +1,37 @@
+# Ignore checkpoint directories (common in ML frameworks like PyTorch/TensorFlow)
+checkpoints/
+*.ckpt
+*.pth
+*.h5
+*.pt
+*.bin
+*.index
+*.data-*
+
+# Ignore data folders (raw/processed datasets, temporary files)
+data/
+*.csv
+*.json
+*.parquet
+*.db
+*.sqlite
+*.hdf5
+*.npy
+*.npz
+*.pickle
+*.pkl
+
+# Ignore temporary/IDE files
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Ignore Jupyter/Notebook checkpoints
+.ipynb_checkpoints/
