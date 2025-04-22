@@ -1,0 +1,19 @@
+# Device: 'cuda' or 'cpu'
+device: cuda
+
+input_size: 227
+img_mean: [0.485, 0.456, 0.406]
+img_std:  [0.229, 0.224, 0.225]
+
+batch_size: 32
+num_workers: 4
+
+# How many PCA components per patch (<= number of channels)
+pca_components: 100
+
+# Percentile of normal‐max‐scores used as anomaly threshold
+threshold_percentile: 95
+
+# Where to save your fitted PaDiM model
+out_dir: checkpoints/padim
+model_name: padim_model.pt
