@@ -5,6 +5,7 @@ A unified pipeline for self-supervised (SSL) pretraining, deep SVDD, and PaDiM a
 1. SSL pretraining gives a strong backbone.
 2. SVDD uses that backbone for a fast, global anomaly detector (image-level).
 3. PaDiM uses the same backbone but augments it with patch distributions for fine-grained, pixel-level heatmaps.
+4. Including asic script using ImageNet‐pretrained ResNet to extract features and detect anomalies to compare speed and output to approach above
 
 ### Self-Supervised Learning (SSL)
  - Representation learning without labels. Real-world “normal” data often isn’t labeled, so we use a simple pretext task (predicting image rotations) to teach a backbone network useful visual features ​
@@ -22,6 +23,7 @@ A unified pipeline for self-supervised (SSL) pretraining, deep SVDD, and PaDiM a
 
 ## 🚀 Features
 
+- **Basic ImageNet-based detection**: `simple_detection.py --image <IMG>` uses a frozen ResNet for quick, no-training anomaly scoring.  
 - **Unified configuration** via `config.py` (no separate YAML/Python split).  
 - **Single entrypoint training**: `train.py --mode {ssl,svdd,padim}`.  
 - **Calibration** of anomaly‑score thresholds: `calibrate.py --mode {svdd,padim}`.  
@@ -48,26 +50,26 @@ pip install -r requirements.txt
 ## 🗂️ Project Structure
 
 ```
-./
-├── config.py
-├── train.py
-├── inference.py
+├── config.py                # All basic configuration constants and paths
+├── train.py                 # Unified training entrypoint for SSL, SVDD, or PaDiM
+├── inference.py             # Fast single-image or bulk anomaly inference with SVDD or PaDiM
+├── simple_detection.py      # Basic script using ImageNet‐pretrained ResNet to extract features and detect anomalies
 ├── trainers/
-│   ├── ssl_trainer.py
-│   ├── svdd_trainer.py
-│   └── padim_trainer.py
+│   ├── ssl_trainer.py       # Self-supervised rotation prediction pretraining (SSL)
+│   ├── svdd_trainer.py      # Deep SVDD one-class training on normal images
+│   └── padim_trainer.py     # PaDiM training: per-patch Gaussian+PCA fitting
 ├── utils/
-│   ├── datasets.py
-│   ├── visualize.py
-│   ├── feature_extractor.py
-|   ├── calibrate.py
-│   └── evaluate.py
+│   ├── datasets.py          # Dataset classes and DataLoader factories (CrackDataset, NormalDataset, etc.)
+│   ├── visualize.py         # Plotting utilities (heatmaps, score histograms, ROC/PR curves, loss plots)
+│   ├── feature_extractor.py # Backbone loading helpers (get_feature_backbone, get_classifier_backbone)
+│   ├── calibrate.py         # Threshold calibration for SVDD and PaDiM (percentile-based)
+│   └── evaluate.py          # Evaluation scripts: compute metrics and generate ROC/PR curves
 ├── checkpoints/
-│   ├── ssl/
-│   ├── svdd/
-│   └── padim/
-├── requirements.txt
-└── README.md
+│   ├── ssl/                 # SSL model checkpoints and loss curves
+│   ├── svdd/                # SVDD model checkpoints and loss curves
+│   └── padim/               # PaDiM model files 
+├── requirements.txt         # Python package dependencies
+└── README.md                # Project overview, setup, and usage instructions
 ```
 
 ---
@@ -127,6 +129,11 @@ Outputs: metrics & ROC/PR curves in `results/{svdd,padim}/…`.
 ---
 
 ## 🔍 Inference
+
+### Basic detection
+```bash
+python simple_detection.py --image data/test.png
+```
 
 ### Single-image
 
