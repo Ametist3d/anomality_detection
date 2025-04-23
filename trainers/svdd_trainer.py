@@ -13,6 +13,7 @@ import logging
 
 # pylint: disable = no-member
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
@@ -22,6 +23,10 @@ torch.manual_seed(42)
 
 
 class NormalDataset(Dataset):
+    """
+    Dataset that loads only normal (non-anomalous) images for one-class SVDD training.
+    """
+
     def __init__(self, root_dir: str, transform=None):
         self.files = [
             os.path.join(dp, f)
@@ -30,7 +35,7 @@ class NormalDataset(Dataset):
             if f.lower().endswith((".png", ".jpg", ".jpeg"))
         ]
         if not self.files:
-            raise RuntimeError(f"No images in {root_dir}")
+            raise RuntimeError(f"No images found in normal directory {root_dir}")
         self.transform = transform
 
     def __len__(self):
@@ -44,6 +49,10 @@ class NormalDataset(Dataset):
 
 
 class SVDDModel(nn.Module):
+    """
+    Deep SVDD feature extractor (backbone without classification head).
+    """
+
     def __init__(self, backbone_name: str):
         super().__init__()
         backbone = getattr(models, backbone_name)(pretrained=False)
@@ -62,17 +71,17 @@ def train_svdd(
     weight_decay: float,
     epochs: int,
     ckpt_dir: str,
-    ckpt_freq: int,
     ssl_ckpt_path: Optional[str],
     backbone_name: str,
     device: str,
 ):
     """
-    One-class SVDD training on normal images. Saves checkpoints and loss curve.
+    One-class SVDD training on normal images. Saves final checkpoint and loss curve plot.
     """
+    # Import config constants
     from config import INPUT_SIZE, IMG_MEAN, IMG_STD
 
-    # Transform
+    # Preprocessing transform
     transform = T.Compose(
         [
             T.Resize(INPUT_SIZE + 29),
@@ -82,6 +91,7 @@ def train_svdd(
         ]
     )
 
+    # Dataset and loader
     dataset = NormalDataset(normal_dir, transform=transform)
     loader = DataLoader(
         dataset,
@@ -92,14 +102,15 @@ def train_svdd(
     )
     logger.info(f"Loaded {len(dataset)} normal samples from {normal_dir}")
 
-    # Model & center init
+    # Initialize model and optional SSL weights
     model = SVDDModel(backbone_name).to(device)
     if ssl_ckpt_path and os.path.exists(ssl_ckpt_path):
-        weights = torch.load(ssl_ckpt_path, map_location=device)
-        filt = {k: v for k, v in weights.items() if not k.startswith("fc.")}
-        model.load_state_dict(filt, strict=False)
+        ssl_weights = torch.load(ssl_ckpt_path, map_location=device)
+        filtered = {k: v for k, v in ssl_weights.items() if not k.startswith("fc.")}
+        model.load_state_dict(filtered, strict=False)
         logger.info(f"Loaded SSL weights from {ssl_ckpt_path}")
 
+    # Compute hypersphere center c
     model.eval()
     with torch.inference_mode():
         feats = []
@@ -107,16 +118,17 @@ def train_svdd(
             feats.append(model(batch.to(device)))
         feats = torch.cat(feats, dim=0)
     c = feats.mean(dim=0).to(device)
+    logger.info("Initialized SVDD center c")
 
     # Optimizer
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # Training
+    # Training loop
     losses = []
     for epoch in range(1, epochs + 1):
         model.train()
         total_loss = 0.0
-        for imgs in tqdm(loader):
+        for imgs in tqdm(loader, desc=f"SVDD Epoch {epoch}/{epochs}", unit="batch"):
             imgs = imgs.to(device)
             feats = model(imgs)
             loss = torch.mean((feats - c) ** 2)
@@ -128,13 +140,13 @@ def train_svdd(
         losses.append(avg_loss)
         logger.info(f"SVDD Epoch [{epoch}/{epochs}] Loss: {avg_loss:.6f}")
 
-    # Final checkpoint
+    # Save final checkpoint
     os.makedirs(ckpt_dir, exist_ok=True)
     ckpt_path = os.path.join(ckpt_dir, "svdd_model.pth")
     torch.save({"model": model.state_dict(), "c": c}, ckpt_path)
     logger.info(f"Saved final SVDD checkpoint: {ckpt_path}")
 
-    # Plot loss curve
+    # Plot and save loss curve
     loss_plot = os.path.join(ckpt_dir, "svdd_loss_curve")
     plot_training_loss(losses, loss_plot, title="SVDD Training Loss")
     logger.info(f"Saved SVDD loss curve to {loss_plot}.png")

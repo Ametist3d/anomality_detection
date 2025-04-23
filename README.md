@@ -1,23 +1,22 @@
-## Anomaly Detection Framework 🛠️
+# Anomaly Detection Framework 🛠️
 
+## Overview
 A unified pipeline for self-supervised (SSL) pretraining, deep SVDD, and PaDiM anomaly detection on image data.
-
-# Self-Supervised Learning (SSL)
- - Representation learning without labels. Real-world “normal” data often isn’t labeled, so we use a simple pretext task (predicting image rotations) to teach a backbone network useful visual features ​
- - Better features → better anomaly detection. A model that’s seen millions of rotations learns edges, textures, and shapes—so when we later train SVDD or PaDiM on top of those features, they’re more discriminative than starting from scratch or even ImageNet alone.
-
-# Deep SVDD
- - One-class anomaly detection. SVDD learns a “hypersphere” in feature space that tightly encloses normal samples; anything that falls outside (farther than a learned center) is flagged anomalous
- - Simplicity & interpretability. You get a single distance score per image, easy thresholding, and clear notion of “distance to normal.” It’s lightweight and well-suited for small datasets of purely normal images.
-
-# PaDiM (Patch-Distribution Modeling)
- - Pixel-level anomaly localization. SVDD gives a per-image score, but PaDiM builds a Gaussian+PCA model per spatial patch of a feature map, then measures patch-wise Mahalanobis distances ​padim. That yields a dense heatmap you can overlay on the input.
- - Richer modeling of local context. By modeling each patch’s distribution (and reducing dimensionality via PCA), PaDiM captures subtle structural deviations (e.g. cracks, texture changes) that a global SVDD score might miss.
-
-# Overview
 1. SSL pretraining gives a strong backbone.
 2. SVDD uses that backbone for a fast, global anomaly detector (image-level).
 3. PaDiM uses the same backbone but augments it with patch distributions for fine-grained, pixel-level heatmaps.
+
+### Self-Supervised Learning (SSL)
+ - Representation learning without labels. Real-world “normal” data often isn’t labeled, so we use a simple pretext task (predicting image rotations) to teach a backbone network useful visual features ​
+ - Better features → better anomaly detection. A model that’s seen millions of rotations learns edges, textures, and shapes—so when we later train SVDD or PaDiM on top of those features, they’re more discriminative than starting from scratch or even ImageNet alone.
+
+### Deep SVDD
+ - One-class anomaly detection. SVDD learns a “hypersphere” in feature space that tightly encloses normal samples; anything that falls outside (farther than a learned center) is flagged anomalous
+ - Simplicity & interpretability. You get a single distance score per image, easy thresholding, and clear notion of “distance to normal.” It’s lightweight and well-suited for small datasets of purely normal images.
+
+### PaDiM (Patch-Distribution Modeling)
+ - Pixel-level anomaly localization. SVDD gives a per-image score, but PaDiM builds a Gaussian+PCA model per spatial patch of a feature map, then measures patch-wise Mahalanobis distances ​padim. That yields a dense heatmap you can overlay on the input.
+ - Richer modeling of local context. By modeling each patch’s distribution (and reducing dimensionality via PCA), PaDiM captures subtle structural deviations (e.g. cracks, texture changes) that a global SVDD score might miss.
 
 ---
 
@@ -53,8 +52,6 @@ pip install -r requirements.txt
 ├── config.py
 ├── train.py
 ├── inference.py
-├── calibrate.py
-├── evaluate.py
 ├── trainers/
 │   ├── ssl_trainer.py
 │   ├── svdd_trainer.py
@@ -62,11 +59,14 @@ pip install -r requirements.txt
 ├── utils/
 │   ├── datasets.py
 │   ├── visualize.py
-│   └── io.py
+│   ├── feature_extractor.py
+|   ├── calibrate.py
+│   └── evaluate.py
 ├── checkpoints/
 │   ├── ssl/
 │   ├── svdd/
 │   └── padim/
+├── requirements.txt
 └── README.md
 ```
 
@@ -147,4 +147,11 @@ python inference.py --mode padim --sort_out data/incoming_images/ --threshold th
 Use `--help` for any script. All paths come from `config.py`.
 
 ---
+## Metrics
 
+### SVDD
+ - [Balanced] AUC=0.9751, Acc=0.9359, Prec=0.9486, Rec=0.9220, F1=0.9351
+ - [Unbalanced] AUC=0.9896, Acc=0.9500, Prec=0.3750, Rec=1.0000, F1=0.5455
+### PaDiM
+ - [Balanced] AUC=0.9886, Acc=0.9454, Prec=0.9816, Rec=0.9080, F1=0.9434
+ - [Unbalanced] AUC=0.9801, Acc=0.9780, Prec=0.5952, Rec=0.8333, F1=0.6944

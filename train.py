@@ -3,38 +3,39 @@ import config
 
 # SSL training function
 from trainers.ssl_trainer import train_ssl
+
 # SVDD training function
 from trainers.svdd_trainer import train_svdd
-# PaDiM components
-from trainers.padim import train_padim
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Unified trainer for SSL, SVDD, and PaDiM")
-    parser.add_argument(
-        '--mode', choices=['ssl', 'svdd', 'padim'], required=True,
-        help="Which model to train"
+# PaDiM components
+from trainers.padim_trainer import train_padim
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Unified trainer for SSL, SVDD, and PaDiM"
     )
     parser.add_argument(
-        '--epochs', type=int,
-        help="Override number of epochs for SSL or SVDD"
+        "--mode",
+        choices=["ssl", "svdd", "padim"],
+        required=True,
+        help="Which model to train",
     )
     parser.add_argument(
-        '--batch_size', type=int,
-        help="Override batch size"
+        "--epochs", type=int, help="Override number of epochs for SSL or SVDD"
     )
+    parser.add_argument("--batch_size", type=int, help="Override batch size")
     parser.add_argument(
-        '--lr', type=float,
-        help="Override learning rate for SSL or SVDD"
+        "--lr", type=float, help="Override learning rate for SSL or SVDD"
     )
     args = parser.parse_args()
 
     # Determine overrides
     batch_size = args.batch_size or config.BATCH_SIZE
 
-    if args.mode == 'ssl':
+    if args.mode == "ssl":
         # SSL training
         epochs = args.epochs or config.EPOCHS_SSL
-        lr     = args.lr or config.LR
+        lr = args.lr or config.LR
         train_ssl(
             unlabeled_dir=config.UNLABELED_DIR,
             batch_size=batch_size,
@@ -44,15 +45,14 @@ if __name__ == '__main__':
             weight_decay=config.WEIGHT_DECAY,
             epochs=args.epochs or config.EPOCHS_SSL,
             ckpt_dir=config.SSL_CKPT_DIR,
-            ckpt_freq=config.SSL_CKPT_FREQ,
             device=config.DEVICE,
-            backbone_name = config.BACKBONE
+            backbone_name=config.BACKBONE,
         )
 
-    elif args.mode == 'svdd':
+    elif args.mode == "svdd":
         # SVDD training
         epochs = args.epochs or config.EPOCHS_SVDD
-        lr     = args.lr or config.SVDD_LR
+        lr = args.lr or config.SVDD_LR
         train_svdd(
             normal_dir=config.SVDD_NORMAL_DIR,
             batch_size=batch_size,
@@ -61,10 +61,9 @@ if __name__ == '__main__':
             weight_decay=config.SVDD_WEIGHT_DECAY,
             epochs=epochs,
             ckpt_dir=config.SVDD_CKPT_DIR,
-            ckpt_freq=config.SVDD_CKPT_FREQ,
-            ssl_ckpt_path=getattr(config, 'SSL_CKPT_PATH', None),
+            ssl_ckpt_path=getattr(config, "SSL_CKPT_PATH", None),
             device=config.DEVICE,
-            backbone_name = config.BACKBONE
+            backbone_name=config.BACKBONE,
         )
 
     else:
@@ -80,4 +79,5 @@ if __name__ == '__main__':
             batch_size=batch_size,
             num_workers=config.NUM_WORKERS,
             device=config.DEVICE,
+            backbone_name=config.BACKBONE
         )

@@ -1,6 +1,14 @@
 import os
 import torch
 
+# ─── Custom cache for pretrained models ────────────────────────────────────────
+TORCH_CACHE_DIR = os.path.expanduser("data/cache")  # or whatever path you choose
+os.makedirs(TORCH_CACHE_DIR, exist_ok=True)
+
+# Tell both torch.hub and torchvision’s model_zoo to use it
+os.environ["TORCH_HOME"] = TORCH_CACHE_DIR
+torch.hub.set_dir(TORCH_CACHE_DIR)
+
 # ─── Device & Seed ─────────────────────────────────────────────────────────────
 torch.manual_seed(42)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

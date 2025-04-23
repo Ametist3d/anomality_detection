@@ -11,7 +11,8 @@ import config
 from tqdm import tqdm
 from trainers.svdd_trainer import SVDDModel
 from utils.datasets import CrackDataset
-from trainers.padim import get_backbone, PaDiM
+from trainers.padim_trainer import PaDiM
+from utils.feature_extractor import get_feature_backbone
 
 # pylint: disable = no-member
 
@@ -60,9 +61,19 @@ def calibrate_svdd(percentile, output_path):
 
 
 def calibrate_padim(percentile, output_path):
-    # Load PaDiM
-    backbone = get_backbone(config.DEVICE, in_channels=6)
+    """
+    Compute the percentile‐based threshold for PaDiM.
+    """
+    # Build PaDiM backbone correctly
+    backbone = get_feature_backbone(
+        backbone_name=config.BACKBONE,
+        pretrained=True,
+        in_channels=6,
+        strip_avgpool=True,
+    ).to(config.DEVICE)
     padim = PaDiM(backbone, pca_components=config.PCA_COMPONENTS, device=config.DEVICE)
+
+    # Load saved PaDiM state
     state = torch.load(config.PADIM_MODEL, map_location=config.DEVICE)
     padim.means, padim.pcas = state["means"], state["pcas"]
 
@@ -85,7 +96,8 @@ def calibrate_padim(percentile, output_path):
                     T.Normalize(mean=config.IMG_MEAN, std=config.IMG_STD),
                 ]
             )
-            img_t, struct_t = trans(img), trans(struct)
+            img_t = trans(img)
+            struct_t = trans(struct)
             combined = torch.cat([img_t, struct_t], dim=0).to(config.DEVICE)
             heatmap = padim.score(combined)
             scores.append(float(np.max(heatmap)))
