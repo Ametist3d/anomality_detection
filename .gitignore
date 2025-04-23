@@ -33,5 +33,5 @@ __pycache__/
 dist/
 build/
 
-# Ignore Jupyter/Notebook checkpoints
-.ipynb_checkpoints/
+# Ignore generated data
+.data/

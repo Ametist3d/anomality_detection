@@ -1,9 +1,15 @@
+import os
 import torch
 import numpy as np
 from torch import nn
 from torchvision import models
 from sklearn.decomposition import PCA
 from tqdm import tqdm
+import torchvision.transforms as T
+from utils.datasets import CrackDataset
+from torch.utils.data import DataLoader
+
+#pylint: disable = no-member
 
 def get_backbone(device, in_channels=6, backbone_name='resnet50'):
     """
@@ -28,7 +34,6 @@ def get_backbone(device, in_channels=6, backbone_name='resnet50'):
     # Strip off the avgpool & fc layers
     features = nn.Sequential(*list(backbone.children())[:-2])
     return features.to(device)
-
 
 class PaDiM:
     """
@@ -109,3 +114,50 @@ class PaDiM:
                     dists[b, i, j] = np.linalg.norm(vec - recon)
 
         return dists if B > 1 else dists[0]
+
+def train_padim(
+    train_dir: str,
+    out_dir: str,
+    model_name: str,
+    pca_components: int,
+    input_size: int,
+    img_mean: list,
+    img_std: list,
+    batch_size: int,
+    num_workers: int,
+    device: str
+):
+    """
+    Train PaDiM anomaly detector by fitting per-patch Gaussians + PCA.
+    """
+    # Build data transforms
+    transform = T.Compose([
+        T.ToPILImage(),
+        T.Resize((input_size, input_size)),
+        T.ToTensor(),
+        T.Normalize(mean=img_mean, std=img_std),
+    ])
+
+    # Dataset & loader
+    train_ds = CrackDataset(root_dir=train_dir, is_train=True, transform=transform)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=True
+    )
+    print(f"Loaded {len(train_ds)} images for PaDiM training")
+
+    # Initialize backbone & PaDiM
+    backbone = get_backbone(device=device, in_channels=6)
+    padim    = PaDiM(backbone, pca_components=pca_components, device=device)
+
+    # Fit (build per-patch PCA+means)
+    padim.fit(train_loader)
+
+    # Save model
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, 'padim_model.pth')
+    torch.save({'means': padim.means, 'pcas': padim.pcas}, out_path)
+    print(f"PaDiM model saved to {out_path}")

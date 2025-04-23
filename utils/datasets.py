@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
+#pylint: disable = no-member, no-name-in-module
+
 from skimage.filters import frangi
 
 class CrackDataset(Dataset):
