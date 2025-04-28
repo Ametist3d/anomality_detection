@@ -33,7 +33,7 @@ THR_SVDD = "checkpoints/svdd_thr.pkl"
 THR_PADIM = "checkpoints/padim_thr.pkl"
 
 # ─── Shared Hyperparameters ────────────────────────────────────────────────────
-BACKBONE = "resnet50"
+BACKBONE = "resnet18"
 BATCH_SIZE = 64
 NUM_WORKERS = 4
 INPUT_SIZE = 227
